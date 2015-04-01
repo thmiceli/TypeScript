@@ -1,0 +1,23 @@
+﻿var a1 = <a />;
+var a2 = <n:a n:v />;
+var a3 = <a n:foo="bar"> {value} <b><c /></b></a>;
+var a4 = <a b={" "} c=" " d="&amp;" e="id=1&group=2" f="&#123456789" g="&#123*;" h="&#x;" />;
+var a5 = <a b="&notanentity;" />;
+var a6 = <a\n/>;
+var a7 = <日本語></日本語>;
+var a8 = <AbC-def\n  test="&#x0026;&#38;">\nbar\nbaz\r\n</AbC-def>;
+var a9 = <a b={x ? <c /> : <d />} />;
+var a10 = <a>{}</a>;
+var a11 = <a>{/* this is a comment */}</a>;
+var a12 = <div>@test content</div>;
+var a13 = <div><br />7x invalid-js-identifier</div>;
+var a14 = <LeftRight left=<a /> right=<b>monkeys</b> />;
+var a15 = <a.b></a.b>;
+var a16 = <a.b.c></a.b.c>;
+var a17 = (<div />) < x;;
+var a18 = <div {...props} />;
+var a19 = <div {...props} post="attribute" />;
+var a20 = <div pre="leading" pre2="attribute" {...props}></div>;
+var a21 = <a>    </a>;
+var a22 = <a>= == =</a>;
+
