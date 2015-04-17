@@ -1026,6 +1026,11 @@ module ts {
                 emit(span.literal);
             }
 
+            function emitYieldExpression(node: YieldExpression) {
+                emitToken(SyntaxKind.YieldKeyword, node.pos);
+                emitOptional(" ", node.expression);
+            }
+            
             // This function specifically handles numeric/string literals for enum and accessor 'identifiers'.
             // In a sense, it does not actually emit identifiers as much as it declares a name for a specific property.
             // For example, this is utilized when feeding in a result to Object.defineProperty.
@@ -2857,6 +2862,9 @@ module ts {
                         }
                     }
                     write("function ");
+                    if (node.asteriskToken) {
+                        write("*");
+                    }
                 }
 
                 if (shouldEmitFunctionName(node)) {
@@ -4263,7 +4271,9 @@ module ts {
                     case SyntaxKind.TemplateExpression:
                         return emitTemplateExpression(<TemplateExpression>node);
                     case SyntaxKind.TemplateSpan:
-                        return emitTemplateSpan(<TemplateSpan>node);
+                         return emitTemplateSpan(<TemplateSpan>node);
+                    case SyntaxKind.YieldExpression:
+                         return emitYieldExpression(<YieldExpression>node);
                     case SyntaxKind.QualifiedName:
                         return emitQualifiedName(<QualifiedName>node);
                     case SyntaxKind.ObjectBindingPattern:

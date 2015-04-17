@@ -6057,8 +6057,8 @@ module ts {
                 }
                 let prop = getPropertyOfType(apparentType, right.text);
                 if (!prop) {
-                    if (right.text) {
-                        error(right, Diagnostics.Property_0_does_not_exist_on_type_1, declarationNameToString(right), typeToString(type));
+                    if (right.text) {                        
+                            error(right, Diagnostics.Property_0_does_not_exist_on_type_1, declarationNameToString(right), typeToString(type));
                     }
                     return unknownType;
                 }
@@ -7689,9 +7689,6 @@ module ts {
             // Grammar checking
             if (!(node.parserContextFlags & ParserContextFlags.Yield)) {
                 grammarErrorOnFirstToken(node, Diagnostics.yield_expression_must_be_contained_within_a_generator_declaration);
-            }
-            else {
-                grammarErrorOnFirstToken(node, Diagnostics.yield_expressions_are_not_currently_supported);
             }
         }
 
@@ -11708,9 +11705,6 @@ module ts {
         }
 
         function checkGrammarForGenerator(node: FunctionLikeDeclaration) {
-            if (node.asteriskToken) {
-                return grammarErrorOnNode(node.asteriskToken, Diagnostics.Generators_are_not_currently_supported);
-            }
         }
 
         function checkGrammarFunctionName(name: Node) {

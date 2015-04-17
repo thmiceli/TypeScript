@@ -3804,7 +3804,7 @@ module ts {
 
             let block = parseBlock(ignoreMissingOpenBrace, /*checkForStrictMode*/ true, diagnosticMessage);
 
-            setYieldContext(savedYieldContext);
+            setYieldContext(savedYieldContext);               
 
             return block;
         }
