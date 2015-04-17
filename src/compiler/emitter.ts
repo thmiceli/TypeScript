@@ -2118,7 +2118,15 @@ module ts {
                 }
             }
 
+            function emitYieldExpression(node: YieldExpression) {
+                emitToken(SyntaxKind.YieldKeyword, node.pos);
+                emitOptional(" ", node.expression);
+            }
+            
             function isNotExpressionIdentifier(node: Identifier) {
+                if (!node.parent) {
+                    return false;
+                }
                 var parent = node.parent;
                 switch (parent.kind) {
                     case SyntaxKind.Parameter:
@@ -2833,6 +2841,9 @@ module ts {
                     emitLeadingComments(node);
                 }
                 write("function ");
+                if (node.asteriskToken) {
+                    write("*");
+                }
                 if (node.kind === SyntaxKind.FunctionDeclaration || (node.kind === SyntaxKind.FunctionExpression && node.name)) {
                     emit(node.name);
                 }
@@ -3544,7 +3555,9 @@ module ts {
                     case SyntaxKind.TemplateExpression:
                         return emitTemplateExpression(<TemplateExpression>node);
                     case SyntaxKind.TemplateSpan:
-                        return emitTemplateSpan(<TemplateSpan>node);
+                         return emitTemplateSpan(<TemplateSpan>node);
+                    case SyntaxKind.YieldExpression:
+                         return emitYieldExpression(<YieldExpression>node);
                     case SyntaxKind.QualifiedName:
                         return emitQualifiedName(<QualifiedName>node);
                     case SyntaxKind.ArrayLiteralExpression:

@@ -5922,9 +5922,7 @@ var ts;
             return checkAnySignatureDeclaration(node) || checkFunctionName(node.name) || checkForBodyInAmbientContext(node.body, false) || checkForGenerator(node);
         }
         function checkForGenerator(node) {
-            if (node.asteriskToken) {
-                return grammarErrorOnNode(node.asteriskToken, ts.Diagnostics.Generators_are_not_currently_supported);
-            }
+            return false;
         }
         function checkFunctionExpression(node) {
             return checkAnySignatureDeclaration(node) || checkFunctionName(node.name) || checkForGenerator(node);
@@ -6531,7 +6529,6 @@ var ts;
             if (!(node.parserContextFlags & 4 /* Yield */)) {
                 return grammarErrorOnFirstToken(node, ts.Diagnostics.yield_expression_must_be_contained_within_a_generator_declaration);
             }
-            return grammarErrorOnFirstToken(node, ts.Diagnostics.yield_expressions_are_not_currently_supported);
         }
     }
     function createProgram(rootNames, options, host) {
@@ -8714,7 +8711,14 @@ var ts;
                     write("\"");
                 }
             }
+            function emitYieldExpression(node) {
+                emitToken(108 /* YieldKeyword */, node.pos);
+                emitOptional(" ", node.expression);
+            }
             function isNotExpressionIdentifier(node) {
+                if (!node.parent) {
+                    return false;
+                }
                 var parent = node.parent;
                 switch (parent.kind) {
                     case 123 /* Parameter */:
@@ -9328,6 +9332,9 @@ var ts;
                     emitLeadingComments(node);
                 }
                 write("function ");
+                if (node.asteriskToken) {
+                    write("*");
+                }
                 if (node.kind === 184 /* FunctionDeclaration */ || (node.kind === 150 /* FunctionExpression */ && node.name)) {
                     emit(node.name);
                 }
@@ -9998,6 +10005,8 @@ var ts;
                         return emitTemplateExpression(node);
                     case 162 /* TemplateSpan */:
                         return emitTemplateSpan(node);
+                    case 160 /* YieldExpression */:
+                        return emitYieldExpression(node);
                     case 120 /* QualifiedName */:
                         return emitQualifiedName(node);
                     case 141 /* ArrayLiteralExpression */:

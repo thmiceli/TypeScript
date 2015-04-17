@@ -6504,9 +6504,7 @@ var ts;
             return checkAnySignatureDeclaration(node) || checkFunctionName(node.name) || checkForBodyInAmbientContext(node.body, false) || checkForGenerator(node);
         }
         function checkForGenerator(node) {
-            if (node.asteriskToken) {
-                return grammarErrorOnNode(node.asteriskToken, ts.Diagnostics.Generators_are_not_currently_supported);
-            }
+            return false;
         }
         function checkFunctionExpression(node) {
             return checkAnySignatureDeclaration(node) || checkFunctionName(node.name) || checkForGenerator(node);
@@ -7113,7 +7111,6 @@ var ts;
             if (!(node.parserContextFlags & 4 /* Yield */)) {
                 return grammarErrorOnFirstToken(node, ts.Diagnostics.yield_expression_must_be_contained_within_a_generator_declaration);
             }
-            return grammarErrorOnFirstToken(node, ts.Diagnostics.yield_expressions_are_not_currently_supported);
         }
     }
     function createProgram(rootNames, options, host) {
@@ -9302,7 +9299,14 @@ var ts;
                     write("\"");
                 }
             }
+            function emitYieldExpression(node) {
+                emitToken(108 /* YieldKeyword */, node.pos);
+                emitOptional(" ", node.expression);
+            }
             function isNotExpressionIdentifier(node) {
+                if (!node.parent) {
+                    return false;
+                }
                 var parent = node.parent;
                 switch (parent.kind) {
                     case 123 /* Parameter */:
@@ -9916,6 +9920,9 @@ var ts;
                     emitLeadingComments(node);
                 }
                 write("function ");
+                if (node.asteriskToken) {
+                    write("*");
+                }
                 if (node.kind === 184 /* FunctionDeclaration */ || (node.kind === 150 /* FunctionExpression */ && node.name)) {
                     emit(node.name);
                 }
@@ -10586,6 +10593,8 @@ var ts;
                         return emitTemplateExpression(node);
                     case 162 /* TemplateSpan */:
                         return emitTemplateSpan(node);
+                    case 160 /* YieldExpression */:
+                        return emitYieldExpression(node);
                     case 120 /* QualifiedName */:
                         return emitQualifiedName(node);
                     case 141 /* ArrayLiteralExpression */:
@@ -22739,13 +22748,6 @@ var ts;
         function getCanonicalFileName(filename) {
             return useCaseSensitivefilenames ? filename : filename.toLowerCase();
         }
-        function getValidSourceFile(fileName) {
-            var sourceFile = program.getSourceFile(getCanonicalFileName(fileName));
-            if (!sourceFile) {
-                throw new Error("Could not find file: '" + fileName + "'.");
-            }
-            return sourceFile;
-        }
         function getSourceFile(filename) {
             return ts.lookUp(sourceFilesByName, getCanonicalFileName(filename));
         }
@@ -22910,11 +22912,11 @@ var ts;
                 kindModifiers: getSymbolModifiers(symbol)
             };
         }
-        function getCompletionsAtPosition(fileName, position) {
+        function getCompletionsAtPosition(filename, position) {
             synchronizeHostData();
-            fileName = ts.normalizeSlashes(fileName);
+            filename = ts.normalizeSlashes(filename);
             var syntacticStart = new Date().getTime();
-            var sourceFile = getValidSourceFile(fileName);
+            var sourceFile = getSourceFile(filename);
             var start = new Date().getTime();
             var currentToken = ts.getTokenAtPosition(sourceFile, position);
             host.log("getCompletionsAtPosition: Get current token: " + (new Date().getTime() - start));
@@ -22952,7 +22954,7 @@ var ts;
                 isRightOfDot = false;
             }
             activeCompletionSession = {
-                filename: fileName,
+                filename: filename,
                 position: position,
                 entries: [],
                 symbols: {},
@@ -22964,7 +22966,6 @@ var ts;
             if (isRightOfDot) {
                 var symbols = [];
                 var isMemberCompletion = true;
-                var isNewIdentifierLocation = false;
                 if (node.kind === 63 /* Identifier */ || node.kind === 120 /* QualifiedName */ || node.kind === 143 /* PropertyAccessExpression */) {
                     var symbol = typeInfoResolver.getSymbolAtLocation(node);
                     if (symbol && symbol.flags & 33554432 /* Import */) {
@@ -22992,7 +22993,6 @@ var ts;
                 var containingObjectLiteral = getContainingObjectLiteralApplicableForCompletion(previousToken);
                 if (containingObjectLiteral) {
                     isMemberCompletion = true;
-                    isNewIdentifierLocation = true;
                     var contextualType = typeInfoResolver.getContextualType(containingObjectLiteral);
                     if (!contextualType) {
                         return undefined;
@@ -23005,7 +23005,6 @@ var ts;
                 }
                 else {
                     isMemberCompletion = false;
-                    isNewIdentifierLocation = isNewIdentifierDefinitionLocation(previousToken);
                     var symbolMeanings = 3152352 /* Type */ | 107455 /* Value */ | 1536 /* Namespace */ | 33554432 /* Import */;
                     var symbols = typeInfoResolver.getSymbolsInScope(node, symbolMeanings);
                     getCompletionEntriesFromSymbols(symbols, activeCompletionSession);
@@ -23017,8 +23016,6 @@ var ts;
             host.log("getCompletionsAtPosition: Semantic work: " + (new Date().getTime() - semanticStart));
             return {
                 isMemberCompletion: isMemberCompletion,
-                isNewIdentifierLocation: isNewIdentifierLocation,
-                isBuilder: isNewIdentifierDefinitionLocation,
                 entries: activeCompletionSession.entries
             };
             function getCompletionEntriesFromSymbols(symbols, session) {
@@ -23040,38 +23037,6 @@ var ts;
                 var result = isInStringOrRegularExpressionOrTemplateLiteral(previousToken) || isIdentifierDefinitionLocation(previousToken) || isRightOfIllegalDot(previousToken);
                 host.log("getCompletionsAtPosition: isCompletionListBlocker: " + (new Date().getTime() - start));
                 return result;
-            }
-            function isNewIdentifierDefinitionLocation(previousToken) {
-                if (previousToken) {
-                    var containingNodeKind = previousToken.parent.kind;
-                    switch (previousToken.kind) {
-                        case 22 /* CommaToken */:
-                            return containingNodeKind === 145 /* CallExpression */ || containingNodeKind === 126 /* Constructor */ || containingNodeKind === 146 /* NewExpression */ || containingNodeKind === 141 /* ArrayLiteralExpression */ || containingNodeKind === 157 /* BinaryExpression */;
-                        case 15 /* OpenParenToken */:
-                            return containingNodeKind === 145 /* CallExpression */ || containingNodeKind === 126 /* Constructor */ || containingNodeKind === 146 /* NewExpression */ || containingNodeKind === 149 /* ParenthesizedExpression */;
-                        case 17 /* OpenBracketToken */:
-                            return containingNodeKind === 141 /* ArrayLiteralExpression */;
-                        case 114 /* ModuleKeyword */:
-                            return true;
-                        case 19 /* DotToken */:
-                            return containingNodeKind === 189 /* ModuleDeclaration */;
-                        case 13 /* OpenBraceToken */:
-                            return containingNodeKind === 185 /* ClassDeclaration */;
-                        case 51 /* EqualsToken */:
-                            return containingNodeKind === 183 /* VariableDeclaration */ || containingNodeKind === 157 /* BinaryExpression */;
-                        case 10 /* TemplateHead */:
-                            return containingNodeKind === 159 /* TemplateExpression */;
-                        case 11 /* TemplateMiddle */:
-                            return containingNodeKind === 162 /* TemplateSpan */;
-                    }
-                    switch (previousToken.getText()) {
-                        case "public":
-                        case "protected":
-                        case "private":
-                            return true;
-                    }
-                }
-                return false;
             }
             function isInStringOrRegularExpressionOrTemplateLiteral(previousToken) {
                 if (previousToken.kind === 7 /* StringLiteral */ || previousToken.kind === 8 /* RegularExpressionLiteral */ || ts.isTemplateLiteralKind(previousToken.kind)) {
@@ -23105,6 +23070,8 @@ var ts;
                     case 150 /* FunctionExpression */:
                     case 151 /* ArrowFunction */:
                     case 184 /* FunctionDeclaration */:
+                    case 125 /* Method */:
+                    case 126 /* Constructor */:
                     case 127 /* GetAccessor */:
                     case 128 /* SetAccessor */:
                     case 129 /* CallSignature */:
@@ -23119,20 +23086,20 @@ var ts;
                     var containingNodeKind = previousToken.parent.kind;
                     switch (previousToken.kind) {
                         case 22 /* CommaToken */:
-                            return containingNodeKind === 183 /* VariableDeclaration */ || containingNodeKind === 164 /* VariableStatement */ || containingNodeKind === 188 /* EnumDeclaration */ || isFunction(containingNodeKind) || containingNodeKind === 185 /* ClassDeclaration */ || containingNodeKind === 184 /* FunctionDeclaration */ || containingNodeKind === 186 /* InterfaceDeclaration */;
+                            return containingNodeKind === 183 /* VariableDeclaration */ || containingNodeKind === 164 /* VariableStatement */ || containingNodeKind === 188 /* EnumDeclaration */ || isFunction(containingNodeKind);
                         case 15 /* OpenParenToken */:
                             return containingNodeKind === 197 /* CatchClause */ || isFunction(containingNodeKind);
                         case 13 /* OpenBraceToken */:
-                            return containingNodeKind === 188 /* EnumDeclaration */ || containingNodeKind === 186 /* InterfaceDeclaration */ || containingNodeKind === 136 /* TypeLiteral */;
-                        case 23 /* LessThanToken */:
-                            return containingNodeKind === 185 /* ClassDeclaration */ || containingNodeKind === 184 /* FunctionDeclaration */ || containingNodeKind === 186 /* InterfaceDeclaration */ || isFunction(containingNodeKind);
-                        case 20 /* DotDotDotToken */:
-                            return containingNodeKind === 123 /* Parameter */ || containingNodeKind === 126 /* Constructor */;
+                            return containingNodeKind === 188 /* EnumDeclaration */ || containingNodeKind === 186 /* InterfaceDeclaration */;
+                        case 21 /* SemicolonToken */:
+                            return containingNodeKind === 124 /* Property */ && previousToken.parent.parent.kind === 186 /* InterfaceDeclaration */;
                         case 106 /* PublicKeyword */:
                         case 104 /* PrivateKeyword */:
-                        case 105 /* ProtectedKeyword */:
+                        case 107 /* StaticKeyword */:
+                        case 20 /* DotDotDotToken */:
                             return containingNodeKind === 123 /* Parameter */;
                         case 67 /* ClassKeyword */:
+                        case 114 /* ModuleKeyword */:
                         case 75 /* EnumKeyword */:
                         case 101 /* InterfaceKeyword */:
                         case 81 /* FunctionKeyword */:
@@ -23140,21 +23107,15 @@ var ts;
                         case 113 /* GetKeyword */:
                         case 117 /* SetKeyword */:
                         case 83 /* ImportKeyword */:
-                        case 102 /* LetKeyword */:
-                        case 68 /* ConstKeyword */:
-                        case 108 /* YieldKeyword */:
                             return true;
                     }
                     switch (previousToken.getText()) {
                         case "class":
                         case "interface":
                         case "enum":
+                        case "module":
                         case "function":
                         case "var":
-                        case "static":
-                        case "let":
-                        case "const":
-                        case "yield":
                             return true;
                     }
                 }
@@ -23786,6 +23747,22 @@ var ts;
             synchronizeHostData();
             filename = ts.normalizeSlashes(filename);
             var sourceFile = getSourceFile(filename);
+            var sourceText = sourceFile.text;
+            var result = getOccurrencesAtPositionCore(sourceFile, position);
+            ts.forEach(result, function (entry) {
+                if (entry.fileName !== filename) {
+                    var message = "getOccurrences for ('" + filename + "'," + position + ") " + "found result in wrong file ('" + entry.fileName + "'," + entry.textSpan.start() + ")";
+                    ts.Debug.fail(message);
+                }
+                if (entry.textSpan.start() < 0 || entry.textSpan.end() > sourceText.length) {
+                    var span = entry.textSpan;
+                    var message = "getOccurrences for ('" + filename + "'," + position + ") " + "found result out of bounds (FileLength=" + sourceText.length + ",Start=" + span.start() + ",End=" + span.end() + ")";
+                    ts.Debug.fail(message);
+                }
+            });
+            return result;
+        }
+        function getOccurrencesAtPositionCore(sourceFile, position) {
             var node = ts.getTouchingWord(sourceFile, position);
             if (!node) {
                 return undefined;
@@ -23893,7 +23870,7 @@ var ts;
                         }
                         if (shouldHighlightNextKeyword) {
                             result.push({
-                                fileName: filename,
+                                fileName: sourceFile.filename,
                                 textSpan: TextSpan.fromBounds(elseKeyword.getStart(), ifKeyword.end),
                                 isWriteAccess: false
                             });

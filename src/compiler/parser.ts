@@ -4409,9 +4409,7 @@ module ts {
         }
 
         function checkForGenerator(node: FunctionLikeDeclaration) {
-            if (node.asteriskToken) {
-                return grammarErrorOnNode(node.asteriskToken, Diagnostics.Generators_are_not_currently_supported);
-            }
+            return false;
         }
 
         function checkFunctionExpression(node: FunctionExpression) {
@@ -5162,7 +5160,6 @@ module ts {
             if (!(node.parserContextFlags & ParserContextFlags.Yield)) {
                 return grammarErrorOnFirstToken(node, Diagnostics.yield_expression_must_be_contained_within_a_generator_declaration);
             }
-            return grammarErrorOnFirstToken(node, Diagnostics.yield_expressions_are_not_currently_supported);
         }
     }
 

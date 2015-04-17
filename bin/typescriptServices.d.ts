@@ -1699,7 +1699,6 @@ declare module ts {
     }
     interface CompletionInfo {
         isMemberCompletion: boolean;
-        isNewIdentifierLocation: boolean;
         entries: CompletionEntry[];
     }
     interface CompletionEntry {
